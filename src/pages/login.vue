@@ -4,7 +4,7 @@
         <el-col :lg="16" :md="12" class="left">
             <div>
                 <div>欢迎光临</div>
-                <div>这里是--------------------------</div>
+                <div>这里是《闪迪后台管理》------为您服务！</div>
             </div>
         </el-col>
         <el-col :lg="8" :md="12" class="right">
