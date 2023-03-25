@@ -76,7 +76,7 @@ resolve:{
 
 创建pages文件夹、index.vue页面、404页面
 
-配置对应router/index.js
+#### 配置对应router/index.js
 
 ```js
 import {
@@ -97,6 +97,11 @@ const routes = [
         component: NotFound
     }
 ]
+
+export const router = createRouter({
+    history: createWebHashHistory(),
+    routes
+})
 ```
 
 // 404.vue
@@ -393,7 +398,7 @@ import store from './store'
 app.use(store)
 ```
 
-##### 配置全局路由拦截
+##### 配置全局守卫
 
 创建permission.js 设置全局路由 判断token是否存在或者过期
 
@@ -402,19 +407,12 @@ app.use(store)
 ```js
 import { router,addRoutes } from "~/router"
 import { getToken } from "~/composables/auth"
-import { 
-    toast,
-    showFullLoading,
-    hideFullLoading
-} from "~/composables/util"
+import { toast } from "~/composables/util"
 import store from "./store"
 
 // 全局前置守卫
 let hasGetInfo = false
 router.beforeEach(async (to,from,next)=>{
-    // 显示loading
-    showFullLoading()
-
     const token = getToken()
 
     // 没有登录，强制跳转回登录页
@@ -437,16 +435,8 @@ router.beforeEach(async (to,from,next)=>{
         // 动态添加路由
         hasNewRoutes = addRoutes(menus)
     }
-
-    // 设置页面标题
-    let title = (to.meta.title ? to.meta.title : "") + "-闪迪商城后台"
-    document.title = title
-
-    hasNewRoutes ? next(to.fullPath) : next()
-})
-
-// 全局后置守卫
-router.afterEach((to, from) => hideFullLoading())   
+	next()
+})   
 ```
 
 login.vue
@@ -597,5 +587,179 @@ onBeforeUnmount(()=>{
             title: "登录页"
         }
     }
+```
+
+## 全局loading进度条实现
+
+### 安装nprogress库
+
+`npm i --save nprogress`
+
+```js
+// mian.js
+import "nprogress/nprogress.css"
+```
+
+composables/util.js
+
+```js
+import nprogress from 'nprogress'
+
+// 显示全屏loading
+export function showFullLoading(){
+  nprogress.start()
+}
+
+// 隐藏全屏loading
+export function hideFullLoading(){
+  nprogress.done()
+}
+```
+
+### permission.js 中配置全局loading加载
+
+```js
+import { router,addRoutes } from "~/router"
+import { getToken } from "~/composables/auth"
+import { 
+    toast,
+    showFullLoading,
+    hideFullLoading
+} from "~/composables/util"
+import store from "./store"
+
+// 全局前置守卫
+let hasGetInfo = false
+router.beforeEach(async (to,from,next)=>{
+    // 显示loading
+    showFullLoading()
+
+    const token = getToken()
+
+    // 没有登录，强制跳转回登录页
+    if(!token && to.path != "/login"){
+        toast("请先登录","error")
+        return next({ path:"/login" })
+    }
+
+    // 防止重复登录
+    if(token && to.path == "/login"){
+        toast("请勿重复登录","error")
+        return next({ path:from.path ? from.path : "/" })
+    }
+
+    // 如果用户登录了，自动获取用户信息，并存储在vuex当中
+    let hasNewRoutes = false
+    if(token && !hasGetInfo){
+        let { menus } = await store.dispatch("getinfo")
+        hasGetInfo = true
+        // 动态添加路由
+        hasNewRoutes = addRoutes(menus)
+    }
+	next()
+})
+
+// 全局后置守卫
+router.afterEach((to, from) => hideFullLoading())
+```
+
+## 动态页面标题
+
+### 给路由设置meta属性，设置title
+
+router/index.js
+
+```js
+import {
+    createRouter,
+    createWebHashHistory
+} from 'vue-router'
+
+import Index from '~/pages/index.vue'
+import Login from '~/pages/login.vue'
+import NotFound from '~/pages/404.vue'
+
+
+// 默认路由，所有用户共享
+const routes = [
+    {
+        path: "/",
+        component: Index,
+        meta: {
+            title: "登录页"
+        }
+    },
+    {
+        path: "/login",
+        component: Login,
+        meta: {
+            title: "登录页"
+        }
+    }, {
+        path: '/:pathMatch(.*)*',
+        name: 'NotFound',
+        component: NotFound
+    }]
+
+
+
+export const router = createRouter({
+    history: createWebHashHistory(),
+    routes
+})
+```
+
+### 在全局守卫设置页面标题
+
+permission.js
+
+```js
+import { router,addRoutes } from "~/router"
+import { getToken } from "~/composables/auth"
+import { 
+    toast,
+    showFullLoading,
+    hideFullLoading
+} from "~/composables/util"
+import store from "./store"
+
+// 全局前置守卫
+let hasGetInfo = false
+router.beforeEach(async (to,from,next)=>{
+    // 显示loading
+    showFullLoading()
+
+    const token = getToken()
+
+    // 没有登录，强制跳转回登录页
+    if(!token && to.path != "/login"){
+        toast("请先登录","error")
+        return next({ path:"/login" })
+    }
+
+    // 防止重复登录
+    if(token && to.path == "/login"){
+        toast("请勿重复登录","error")
+        return next({ path:from.path ? from.path : "/" })
+    }
+
+    // 如果用户登录了，自动获取用户信息，并存储在vuex当中
+    let hasNewRoutes = false
+    if(token && !hasGetInfo){
+        let { menus } = await store.dispatch("getinfo")
+        hasGetInfo = true
+        // 动态添加路由
+        hasNewRoutes = addRoutes(menus)
+    }
+
+    // 设置页面标题
+    let title = (to.meta.title ? to.meta.title : "") + "-闪迪商城后台"
+    document.title = title
+
+    hasNewRoutes ? next(to.fullPath) : next()
+})
+
+// 全局后置守卫
+router.afterEach((to, from) => hideFullLoading())
 ```
 
