@@ -1,4 +1,4 @@
-# 蒂莎后台管理系统
+# 闪迪后台管理系统
 
 ## 项目构建
 
@@ -761,5 +761,125 @@ router.beforeEach(async (to,from,next)=>{
 
 // 全局后置守卫
 router.afterEach((to, from) => hideFullLoading())
+```
+
+## 后台主布局实现
+
+### admin创建
+
+新建scr/layouts/admin.vue
+
+### 组件模块
+
+新建layouts/components
+
+components/FHeader.vue 头部侧边栏
+
+components/FMeanuvue 菜单
+
+components/FTagList.vue 标签导航
+
+```js
+// router/index.js
+import {
+    createRouter,
+    createWebHashHistory
+} from 'vue-router'
+
+import Admin from "~/layouts/admin.vue";
+import Index from '~/pages/index.vue'
+import Login from '~/pages/login.vue'
+import NotFound from '~/pages/404.vue'
+
+// 默认路由，所有用户共享
+const routes = [
+    {
+        path: "/",
+        name:"admin",
+        component: Admin,
+        // 子路由
+        children:[{
+            path: "/",
+            component: Index,
+            meta: {
+                title: "后台首页"
+            }
+        }]
+    },
+    {
+        path: "/login",
+        component: Login,
+        meta: {
+            title: "登录页"
+        }
+    }, {
+        path: '/:pathMatch(.*)*',
+        name: 'NotFound',
+        component: NotFound
+    }
+]
+
+export const router = createRouter({
+    history: createWebHashHistory(),
+    routes
+})
+```
+
+
+
+
+
+```vue
+<template>
+    <el-container>
+        <el-header>
+            <f-header/>
+        </el-header>
+        <el-container>
+            <el-aside :width="$store.state.asideWidth">
+                <f-menu></f-menu>
+            </el-aside>
+            <el-main>
+                <f-tag-list/>
+                <router-view v-slot="{ Component }">
+                    <transition name="fade">
+                        <keep-alive :max="10">
+                            <component :is="Component"></component>
+                        </keep-alive>
+                    </transition>
+                </router-view>
+            </el-main>
+        </el-container>
+    </el-container>
+</template>
+<script setup>
+import FHeader from './components/FHeader.vue';
+import FMenu from './components/FMenu.vue';
+import FTagList from './components/FTagList.vue';
+</script>
+<style>
+.el-aside{
+    transition: all 0.2s;
+}
+.fade-enter-from{
+    opacity: 0;
+}
+.fade-enter-to{
+    opacity: 1;
+}
+.fade-leave-from{
+    opacity: 1;
+}
+.fade-leave-to{
+    opacity: 0;
+}
+.fade-enter-active,
+.fade-leave-active{
+    transition: all 0.3s;
+}
+.fade-enter-active{
+    transition-delay: 0.3s;
+}
+</style>
 ```
 
